@@ -34,40 +34,38 @@ using PEGParser
 	endl = r"[\n\r]"
 end
 
+
+
 println("="^40)
 
-(ast, pos, error) = parse(julia_error, testerr)
+function parse(grammar::Grammar, text::String)
+  rule = grammar.rules[:start]
+  cache = StandardCache(Dict{String, Node}())
+  
+  (ast, pos, error) = PEGParser.parse(grammar, rule, text, 1, cache)
+
+  # if pos < length(text) + 1
+  #   error = ParseError("Entire string did not match", pos)
+  # end
+
+  return (ast, pos, error, cache)
+end
+
+
+
+# (ast, pos, error) = parse(grammar, rule, text, 1, cache, Dict{String, Node}())
+
+
+(ast, pos, error, cache) = parse(julia_error, testerr)
 println(ast)
+println("\n", "="^40, "Error","\n")
+
+println(error)
+
+println("\n", "="^40, "Cache","\n")
+
+println(cache)
 
 
-# function parse(grammar::Grammar, text::String; cache=true, start=:start)
-#   rule = grammar.rules[start]
-#
-#   (ast, pos, error) = parse(grammar, rule, text, 1, cache, Dict{String, Node}())
-#
-#   if pos < length(text) + 1
-#     error = ParseError("Entire string did not match", pos)
-#   end
-#
-#   return (ast, pos, error);
-# end
-#
-
-# @grammar calc1 begin
-#   start = (number + op + number) { apply(eval(_2), _1, _3) }
-#
-#   op = plus | minus
-#   number = (-space + r"[0-9]+") {parseint(_1.value)}
-#   plus = (-space + "+") {symbol(_1.value)}
-#   minus = (-space + "-") {symbol(_1.value)}
-#   space = r"[ \t\n\r]*"
-# end
-#
-#
-# println("="^40)
-#
-# data = "4+5"
-# (ast, pos, error) = parse(calc1, data)
-# println(ast)
 
 

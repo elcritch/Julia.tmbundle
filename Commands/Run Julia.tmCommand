@@ -73,42 +73,8 @@ TextMate::Executor.run(e_sh(ENV["TM_JULIA"]) || "julia",
     "#{htmlize(indent)}&lt;div #{lstyle}&gt;while loading &lt;strong&gt;#{filename}&lt;/strong&gt;,&lt;/div&gt;&lt;div #{rstyle}&gt;in #{linename}&lt;/div&gt;" +
       "&lt;br&gt;\n&lt;/ul&gt;\n"
   else
-    str+"&lt;br&gt;"
+    str.gsub(/ /,"&amp;nbsp;").gsub(/\t/,"&amp;nbsp;"*4)+"&lt;br&gt;"
   end
-  #   if str =~ /^in (\w+) at (.+)(?:\:(\d+))?/
-  #     puts("MAtach!")
-  #     if true
-  #       return "Ha!"
-  #     end
-  #
-  #     # indent = $1
-  #     method = $1
-  #     file   = $2
-  #     line   = $3
-  #     indent = "   "
-  #     # indent += " " if file.sub!(/^\"(.*)\"/,"\1")
-  #     url = "&amp;amp;url=file://" + e_url(file)
-  #     display_name = ENV["TM_DISPLAYNAME"]
-  #     "#{htmlize(indent)}&lt;a class=\"near\" href=\"txmt://open?line=#{line + url}\"&gt;" +
-  #       (method ? "method #{CGI::escapeHTML method}" : "&lt;em&gt;at top level&lt;/em&gt;") +
-  #       "&lt;/a&gt; in &lt;strong&gt;#{CGI::escapeHTML display_name}&lt;/strong&gt; at line #{line}&lt;br/&gt;\n"
-  #   elsif str =~ /^(#+)\s+(.+)/
-  #     puts("MAtach!")
-  #   level=$1.length.to_s
-  #   title=$2
-  #   "&lt;h#{level}&gt;#{$1} #{title} &lt;/h#{level}&gt;"
-  # elsif str =~ /[\`\_\~\*]/
-  #     puts("MAtach!")
-  #   ans = str
-  #   ans = ans.gsub(/`(.+?)`/) {|t| "`&lt;tt&gt;&lt;dfn&gt;#{$1}&lt;/dfn&gt;&lt;/tt&gt;`"}
-  #   ans = ans.gsub(/_(\w.+?)_/) {|t| "_&lt;i&gt;#{$1}&lt;/i&gt;_"}
-  #   ans = ans.gsub(/\~(\w.+?)\~/) {|t| "~&lt;em&gt;#{$1}&lt;/em&gt;~"}
-  #   ans = ans.gsub(/\*(\w.+?)\*/) {|t| "*&lt;bold&gt;#{$1}&lt;/bold&gt;*"}
-  #   ans +"&lt;br&gt;"
-  # else
-  #     puts("no MAtach!")
-  #   str+"&lt;br&gt;"
-  # end
 end
 
 puts("JULIA_SHARE: #{JULIA_SHARE}")
