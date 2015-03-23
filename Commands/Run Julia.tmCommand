@@ -2,53 +2,121 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>beforeRunningCommand</key>
-	<string>saveModifiedFiles</string>
-	<key>command</key>
-	<string>#!/usr/bin/env ruby18 -wKU
+	<key>changed</key>
+	<dict>
+		<key>command</key>
+		<string>#!/usr/bin/env ruby18 -wKU
 require "#{ENV["TM_SUPPORT_PATH"]}/lib/escape"
 require "#{ENV['TM_SUPPORT_PATH']}/lib/tm/save_current_document"
 require "#{ENV["TM_SUPPORT_PATH"]}/lib/tm/executor"
 
 TextMate.save_if_untitled('jl')
-TextMate::Executor.run(e_sh(ENV['TM_JULIA']), ENV['TM_FILEPATH'], :version_args =&gt; '-v', :version_regex =&gt; /(\w+ [\d.]+).*/)
+# TextMate::Executor.run(e_sh(ENV['TM_JULIA']), ENV['TM_FILEPATH'], :use_hashbang =&gt; false, :version_args =&gt; '-v', :version_regex =&gt; /(\w+ \w+ [\d.]+).*/)
+
+
+JULIA = e_sh(ENV["TM_JULIA"]) || "julia"
+JULIA_SHARE = `#{JULIA} -e 'LOAD_PATH[end] |&gt; splitdir |&gt; first |&gt; splitdir |&gt; first |&gt; println '`.strip()
+
+rstyle="style='display: inline-block; width: 35%;'"
+lstyle="style='display: inline-block; width: 60%;'"
+prestyle="style='display: inline-block; width: 60%; text-align: center; float:center; font-family: monospace; font-size: 120%; border: 1px dashed black; padding: 0.2em; '"
+
+TextMate::Executor.run(e_sh(ENV["TM_JULIA"]) || "julia", 
+                       ENV["TM_FILEPATH"], 
+                       :version_regex =&gt; /(\w+ \w+ [\d.]+).*/, 
+                       # :create_error_pipe =&gt; true, 
+
+                       :use_hashbang =&gt; !ENV.has_key?('TM_JULIA') ) do |str, type|
+                         
+                  
+  if str =~ /^(\s*)ERROR: (.+)\s*$/
+    err = $2  
+    # ERROR: @right_str not defined 
+    "&lt;strong&gt;ERROR:&lt;/strong&gt; &lt;div #{prestyle}&gt;  #{err}  &lt;/div&gt;&lt;br&gt;\n"+
+      "&lt;ul&gt;\n"
+  elsif str =~ /^(\s+)in (\w+) at (.+\.\w+)(?:\:(\d+))?\s*$/  
+    # indent = $1
+    indent = $1
+    method = $2
+    file   = $3
+    line   = $4 || ""
+    
+    file = JULIA_SHARE + "/base/" + file.strip() if not file.include? "/" 
+    url = "url=file://" + e_url(file)
+    display_name = ENV["TM_DISPLAYNAME"]
+    
+    if (line &amp;&amp; !file.include?(".dylib")) 
+      methodname = "&lt;a class=\"near\" href=\"txmt://open?line=#{line}&amp;amp;#{url}\"&gt;#{CGI::escapeHTML method}&lt;/a&gt;"
+      filename   = "&lt;a href=\"txmt://open?#{url}\"&gt;#{file.gsub(JULIA_SHARE, "$julia")}&lt;/a&gt;"
+    else
+      methodname = "&lt;strong&gt;#{CGI::escapeHTML method}&lt;/strong&gt;"
+      filename   = "&lt;i&gt;&lt;u&gt;#{File.basename(file)}&lt;/u&gt;&lt;/i&gt;"
+    end
+    
+    "&lt;li&gt;"+
+      "&lt;div #{lstyle}&gt;in &lt;strong&gt;#{methodname}&lt;/strong&gt;&lt;/div&gt;&lt;div #{rstyle}&gt;at #{filename}&lt;/div&gt;"+
+      "&lt;/li&gt;\n"
+  elsif str =~ /^(\s*)while loading (.+\.\w+), in (.+?) on line (\d+)\s*$/ 
+    # puts("match while: "+str+"&lt;br&gt;")
+    
+    indent = $1
+    file   = $2
+    method = $3
+    line   = $4 
+    
+    url = "url=file://" + e_url(file)
+    
+    filename   = "&lt;a href=\"txmt://open?line=#{line}&amp;amp;#{url}\"&gt;#{file.gsub(ENV["HOME"], "~")}&lt;/a&gt;"
+    linename = "&lt;a class=\"near\" href=\"txmt://open?line=#{line}&amp;amp;#{url}\"&gt;#{method} on line #{line}&lt;/a&gt;"
+    
+    # match while: while loading /Users/elcritch/proj/code/tabulate.jl/tabulate.jl, in expression starting on line 99 
+    "#{htmlize(indent)}&lt;div #{lstyle}&gt;while loading &lt;strong&gt;#{filename}&lt;/strong&gt;,&lt;/div&gt;&lt;div #{rstyle}&gt;in #{linename}&lt;/div&gt;" +
+      "&lt;br&gt;\n&lt;/ul&gt;\n"
+  else
+    str+"&lt;br&gt;"
+  end
+  #   if str =~ /^in (\w+) at (.+)(?:\:(\d+))?/
+  #     puts("MAtach!")
+  #     if true
+  #       return "Ha!"
+  #     end
+  #
+  #     # indent = $1
+  #     method = $1
+  #     file   = $2
+  #     line   = $3
+  #     indent = "   "
+  #     # indent += " " if file.sub!(/^\"(.*)\"/,"\1")
+  #     url = "&amp;amp;url=file://" + e_url(file)
+  #     display_name = ENV["TM_DISPLAYNAME"]
+  #     "#{htmlize(indent)}&lt;a class=\"near\" href=\"txmt://open?line=#{line + url}\"&gt;" +
+  #       (method ? "method #{CGI::escapeHTML method}" : "&lt;em&gt;at top level&lt;/em&gt;") +
+  #       "&lt;/a&gt; in &lt;strong&gt;#{CGI::escapeHTML display_name}&lt;/strong&gt; at line #{line}&lt;br/&gt;\n"
+  #   elsif str =~ /^(#+)\s+(.+)/
+  #     puts("MAtach!")
+  #   level=$1.length.to_s
+  #   title=$2
+  #   "&lt;h#{level}&gt;#{$1} #{title} &lt;/h#{level}&gt;"
+  # elsif str =~ /[\`\_\~\*]/
+  #     puts("MAtach!")
+  #   ans = str
+  #   ans = ans.gsub(/`(.+?)`/) {|t| "`&lt;tt&gt;&lt;dfn&gt;#{$1}&lt;/dfn&gt;&lt;/tt&gt;`"}
+  #   ans = ans.gsub(/_(\w.+?)_/) {|t| "_&lt;i&gt;#{$1}&lt;/i&gt;_"}
+  #   ans = ans.gsub(/\~(\w.+?)\~/) {|t| "~&lt;em&gt;#{$1}&lt;/em&gt;~"}
+  #   ans = ans.gsub(/\*(\w.+?)\*/) {|t| "*&lt;bold&gt;#{$1}&lt;/bold&gt;*"}
+  #   ans +"&lt;br&gt;"
+  # else
+  #     puts("no MAtach!")
+  #   str+"&lt;br&gt;"
+  # end
+end
+
+puts("JULIA_SHARE: #{JULIA_SHARE}")
 </string>
-	<key>input</key>
-	<string>none</string>
-	<key>inputFormat</key>
-	<string>text</string>
-	<key>keyEquivalent</key>
-	<string>@r</string>
-	<key>name</key>
-	<string>Run Julia</string>
-	<key>outputCaret</key>
-	<string>afterOutput</string>
-	<key>outputFormat</key>
-	<string>html</string>
-	<key>outputLocation</key>
-	<string>newWindow</string>
-	<key>requiredCommands</key>
-	<array>
-		<dict>
-			<key>command</key>
-			<string>julia</string>
-			<key>locations</key>
-			<array>
-				<string>/Applications/Julia-0.3.app/Contents/Resources/julia/bin/julia</string>
-			</array>
-			<key>moreInfoURL</key>
-			<string>http://julialang.org/downloads/</string>
-			<key>variable</key>
-			<string>TM_JULIA</string>
-		</dict>
-	</array>
-	<key>scope</key>
-	<string>source.julia</string>
-	<key>semanticClass</key>
-	<string>process.run.script.julia</string>
+	</dict>
+	<key>isDelta</key>
+	<true/>
 	<key>uuid</key>
 	<string>E8BC7C6A-067B-4D5C-927A-E4EBF70614F5</string>
-	<key>version</key>
-	<integer>2</integer>
 </dict>
 </plist>
