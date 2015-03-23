@@ -14,17 +14,17 @@ while loading /Users/elcritch/proj/code/tabulate.jl/tabulate.jl, in expression s
 using PEGParser
 
 @grammar julia_error begin
-	start = r"ERROR:" + error
+	start = r"ERROR:" + Error
 
-	error = errorkind + errormessage + tracebacks
-	errorkind = -space + r"\w+" + ":"
-	errormessage = r".+"
-	tracebacks = +( traceback ) + traceend
+	Error = kind + message + Tracebacks
+		kind = -space + r"\w+" + ":"
+		message = r".+"
+	Tracebacks = +( TraceBack ) + TraceEnd
 	
-	traceback = -space + "in" + methodname + " at" + fileurl
-	fileurl = filepath + ?( ":" + linenumber) + endl
-	methodname = -space + r"[\w!_]+"
-	traceend = "while loading" + filepathend + " in expression starting on " + ("line " + linenumber)
+	TraceBack = -space + "in" + methodname + " at" + fileurl
+		fileurl = filepath + ?( ":" + linenumber) + endl
+		methodname = -space + r"[\w!_]+"
+	TraceEnd = "while loading" + filepathend + " in expression starting on " + ("line " + linenumber)
 
 	linenumber = + r"\d+"
 	filepath = -space + r".+"
